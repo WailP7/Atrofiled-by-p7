@@ -1,0 +1,55 @@
+# Siril stacking script :
+=================================================================================================
+requires 1.2
+
+cd lights
+convert light -out=light_
+
+cd ../darks
+convert dark -out=dark_
+
+cd ../flats
+convert flat -out=flat_
+
+cd ../bias
+convert bias -out=bias_
+
+# go back to lights
+cd ../lights
+
+# calibrate lights
+calibrate light_ -dark=../darks/dark_ -flat=../flats/flat_ -bias=../bias/bias_
+
+# register stars
+register pp_light_
+
+# stack result
+stack r_pp_light_ rej 3 3 -norm=addscale -output=stacked_result
+==============================================================================================
+
+
+1 convert RAW frames
+2 calibrate lights
+3 register stars
+4 stack frames
+5 stretch image
+6 color calibration
+
+Example minimal script:
+==========================================
+requires 1.2
+convert light -out=light_
+calibrate light_
+register pp_light_
+stack r_pp_light_
+==========================================
+Advanced scripts often add
+
+rejection algorithms
+normalization
+drizzle stacking
+
+Example stack command
+==========================================
+stack r_pp_light_ rej 3 3 -norm=addscale
+==========================================
