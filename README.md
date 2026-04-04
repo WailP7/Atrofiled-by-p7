@@ -12,7 +12,7 @@ dark frames
 flat frames
 bias frames
 
-"no need for bias if u got large sensor" :)
+" bias is important if u got large or fullframe sensor" :)
 
 These files allow you to test a full calibration and stacking workflow.
 
