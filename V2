@@ -1,0 +1,119 @@
+# Siril stacking script (refactored)
+# Requires Siril >= 1.2
+requires 1.2
+
+# -----------------------------------------------------------------------------
+# Configuration (change these as needed)
+# -----------------------------------------------------------------------------
+# Directories (relative to script)
+set BIAS_DIR       bias
+set DARK_DIR       darks
+set FLAT_DIR       flats
+set LIGHT_DIR      lights
+
+# Output master filenames (placed one level up to mimic original layout)
+set MASTER_BIAS    ../master-bias
+set MASTER_DARK    ../master-dark
+set MASTER_FLAT    ../master-flat
+set STACK_RESULT   ../result_stacked
+
+# Rejection / stacking parameters
+# rej <low> <high>  -> the two numbers used for rejection (default values kept)
+set REJ_LOW        3
+set REJ_HIGH       3
+
+# Normalization choices (tweak per your dataset)
+# - for flats: mul (multiplicative) is common
+# - for lights: addscale or other normalization depending on acquisition
+set FLAT_NORM      -norm=mul
+set LIGHT_NORM     -norm=addscale
+
+# Other toggles
+# Use -nonorm for bias/dark masters (don't normalize frames)
+set NO_NORM        -nonorm
+
+# -----------------------------------------------------------------------------
+# Helper: prints so you know where the script is at (useful in logs)
+# If your Siril version doesn't support 'print', remove the lines or replace
+# -----------------------------------------------------------------------------
+print "=== Siril: Starting master calibration & stacking ==="
+
+# -----------------------------------------------------------------------------
+# STEP 1: Process Masters
+#   - Bias: create master bias
+#   - Dark: create master dark
+#   - Flats: convert, pre-calibrate with master bias, then stack
+# -----------------------------------------------------------------------------
+
+print "Processing bias frames..."
+cd $BIAS_DIR
+# convert RAW bias frames into working stack prefix bias_
+convert bias -out=bias_
+# stack them into master bias; using NO_NORM is typical for bias frames
+stack bias_ rej $REJ_LOW $REJ_HIGH $NO_NORM -out=$MASTER_BIAS
+cd ..
+
+print "Processing dark frames..."
+cd $DARK_DIR
+convert dark -out=dark_
+stack dark_ rej $REJ_LOW $REJ_HIGH $NO_NORM -out=$MASTER_DARK
+cd ..
+
+print "Processing flat frames..."
+cd $FLAT_DIR
+convert flat -out=flat_
+# Pre-calibrate flats with the master bias to remove bias pattern before stacking
+# (ensure $MASTER_BIAS exists)
+# calibrate <input_prefix> -bias=<path_to_master_bias>
+calibrate flat_ -bias=$MASTER_BIAS
+# stack preprocessed flats (prefix is typically pp_flat_) and normalize using multiplicative normalization
+stack pp_flat_ rej $REJ_LOW $REJ_HIGH $FLAT_NORM -out=$MASTER_FLAT
+cd ..
+
+print "Masters created: $MASTER_BIAS, $MASTER_DARK, $MASTER_FLAT"
+
+# -----------------------------------------------------------------------------
+# STEP 2: Process Lights
+#   - Convert lights
+#   - Calibrate with the masters
+#   - Register (star alignment)
+#   - Stack light frames into final image
+# -----------------------------------------------------------------------------
+
+print "Processing light frames..."
+cd $LIGHT_DIR
+convert light -out=light_
+# calibrate <input_prefix> -dark=<master_dark> -flat=<master_flat> [options]
+# -cc=dark: chromatic correction using dark channel (keeps color balance for CFA)
+# -cfa: preserve CFA pattern for demosaicing-aware ops
+# -equalize_cfa: helps equalize sensor response across CFA (optional)
+calibrate light_ -dark=$MASTER_DARK -flat=$MASTER_FLAT -cc=dark -cfa -equalize_cfa
+
+# register preprocessed lights (pp_light_ is the usual prefix after calibrate)
+register pp_light_
+
+# stack registered frames (r_pp_light_ is the usual prefix after register)
+# Use the chosen normalization for lights (e.g., addscale)
+stack r_pp_light_ rej $REJ_LOW $REJ_HIGH $LIGHT_NORM -out=$STACK_RESULT
+cd ..
+
+print "Light frames stacked -> $STACK_RESULT"
+print "=== Siril: Script finished ==="
+
+# -----------------------------------------------------------------------------
+# Notes & tuning tips
+# -----------------------------------------------------------------------------
+# - rej <low> <high> : these control rejection thresholds; 3 3 is a conservative default.
+#   Increase only if you have heavier outliers (satellite trails, strong transient events).
+# - Normalization:
+#   * For flats: multiplicative normalization (-norm=mul) is typical.
+#   * For lights: addscale often gives good results when exposures vary; try -norm=mul if exposures are same.
+# - If you want drizzle stacking (for improved resolution), add -drizzle options to stack if supported.
+# - If some steps fail on your machine, run them manually in Siril's GUI or interactive shell to inspect intermediate prefixes:
+#     convert X -out=...
+#     calibrate ...
+#     register ...
+# - Consider renaming this file to avoid apostrophes or a trailing colon in filename (some OSes have trouble):
+#     suggested: siril-scripts.ssf  or siril_scripts.ssf
+# - Optional: add a small check after each master creation to ensure the master file exists before proceeding.
+#   Siril scripting doesn't have a standardized portable*
