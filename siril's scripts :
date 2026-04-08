@@ -2,29 +2,34 @@
 =================================================================================================
 requires 1.2
 
+# --- STEP 1: Process Masters ---
+
+cd bias
+convert bias -out=bias_
+stack bias_ rej 3 3 -nonorm -out=../master-bias
+cd ..
+
+cd darks
+convert dark -out=dark_
+stack dark_ rej 3 3 -nonorm -out=../master-dark
+cd ..
+
+cd flats
+convert flat -out=flat_
+# Pre-calibrate flats with bias before stacking
+calibrate flat_ -bias=../master-bias
+stack pp_flat_ rej 3 3 -norm=mul -out=../master-flat
+cd ..
+
+# --- STEP 2: Process Lights ---
+
 cd lights
 convert light -out=light_
-
-cd ../darks
-convert dark -out=dark_
-
-cd ../flats
-convert flat -out=flat_
-
-cd ../bias
-convert bias -out=bias_
-
-# go back to lights
-cd ../lights
-
-# calibrate lights
-calibrate light_ -dark=../darks/dark_ -flat=../flats/flat_ -bias=../bias/bias_
-
-# register stars
+# Use the masters created above
+calibrate light_ -dark=../master-dark -flat=../master-flat -cc=dark -cfa -equalize_cfa
 register pp_light_
-
-# stack result
-stack r_pp_light_ rej 3 3 -norm=addscale -output=stacked_result
+stack r_pp_light_ rej 3 3 -norm=addscale -output=../result_stacked
+cd ..
 ==============================================================================================
 
 
