@@ -34,4 +34,4 @@ Example workflow
 Capture light frames of the target object.
 Capture calibration frames dark flat bias.
 Stack the frames in Siril.
-Perform final adjustments in Lr mobile or pc
+Perform final adjustments in Lr mobile or pc or any Editor "support RAW files"
