@@ -1,5 +1,5 @@
 # Siril stacking script :
-=================================================================================================
+
 requires 1.2
 
 # --- STEP 1: Process Masters ---
@@ -30,7 +30,7 @@ calibrate light_ -dark=../master-dark -flat=../master-flat -cc=dark -cfa -equali
 register pp_light_
 stack r_pp_light_ rej 3 3 -norm=addscale -output=../result_stacked
 cd ..
-==============================================================================================
+
 
 
 1 convert RAW frames
@@ -41,13 +41,13 @@ cd ..
 6 color calibration
 
 Example minimal script:
-==========================================
+
 requires 1.2
 convert light -out=light_
 calibrate light_
 register pp_light_
 stack r_pp_light_
-==========================================
+
 Advanced scripts often add
 
 rejection algorithms
@@ -55,6 +55,6 @@ normalization
 drizzle stacking
 
 Example stack command
-==========================================
+
 stack r_pp_light_ rej 3 3 -norm=addscale
-==========================================
+
